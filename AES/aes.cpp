@@ -29,7 +29,8 @@ int main()
 
 	char plainText[BLOCKSIZE + 2];
 	char key[BLOCKSIZE + 2];
-
+	char cipherText[BLOCKSIZE + 2];
+	char decrypted[BLOCKSIZE + 2];
 	plainFile.read(plainText, BLOCKSIZE);
 	keyFile.read(key, BLOCKSIZE);
 
@@ -38,9 +39,17 @@ int main()
 	cout << "KEY\t: ";
 	printByte(key);
 
+	/// encrypt
+	cipherFile.write(plainText, BLOCKSIZE);
+	
+	// decrypt
+	decryptFile.write(plainText, BLOCKSIZE);
 
 	//close filestreams
-
+	plainFile.close();
+	keyFile.close();
+	cipherFile.close();
+	decryptFile.close();
 }
 
 void printByte(char* b)

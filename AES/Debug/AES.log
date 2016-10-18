@@ -1,3 +1,5 @@
 ﻿  aes.cpp
-  AES.vcxproj -> c:\users\journey\documents\visual studio 2015\Projects\AES\Debug\AES.exe
-  AES.vcxproj -> c:\users\journey\documents\visual studio 2015\Projects\AES\Debug\AES.pdb (Full PDB)
+c:\users\journey\documents\visual studio 2015\projects\aes\aes\aes.cpp(32): warning C4101: 'cipherText': unreferenced local variable
+c:\users\journey\documents\visual studio 2015\projects\aes\aes\aes.cpp(33): warning C4101: 'decrypted': unreferenced local variable
+  AES.vcxproj -> C:\Users\Journey\documents\visual studio 2015\Projects\AES\Debug\AES.exe
+  AES.vcxproj -> C:\Users\Journey\documents\visual studio 2015\Projects\AES\Debug\AES.pdb (Full PDB)
