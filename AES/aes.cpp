@@ -2,12 +2,31 @@
 #include<fstream>
 #include<string>
 
-#define BLOCKSIZE 16
+
+#define BLOCKBYTE 16
+//0x00~0xFF
+#define RANGE 256
 
 using namespace std;
 
+// GF(2^8) of multiplication
+unsigned char mul[256][256];
+unsigned char sbox[256];
+void makeSbox();
+void makeMulGF();
 // print hex value
-void printByte(char* b);
+void printBlock(char* b);
+
+// RoundKey (Key Expand)
+
+
+//Substitute Byte
+
+//Shift Rows
+
+//Mix Columns
+
+//Round Key
 
 int main()
 {
@@ -27,23 +46,23 @@ int main()
 		return -1;
 	}
 
-	char plainText[BLOCKSIZE + 2];
-	char key[BLOCKSIZE + 2];
-	char cipherText[BLOCKSIZE + 2];
-	char decrypted[BLOCKSIZE + 2];
-	plainFile.read(plainText, BLOCKSIZE);
-	keyFile.read(key, BLOCKSIZE);
+	char plainText[BLOCKBYTE + 2];
+	char key[BLOCKBYTE + 2];
+	char cipherText[BLOCKBYTE + 2];
+	char decrypted[BLOCKBYTE + 2];
+	plainFile.read(plainText, BLOCKBYTE);
+	keyFile.read(key, BLOCKBYTE);
 
 	cout << "PLAIN\t: ";
-	printByte(plainText);
+	printBlock(plainText);
 	cout << "KEY\t: ";
-	printByte(key);
+	printBlock(key);
 
 	/// encrypt
-	cipherFile.write(plainText, BLOCKSIZE);
+	cipherFile.write(cipherText, BLOCKBYTE);
 	
 	// decrypt
-	decryptFile.write(plainText, BLOCKSIZE);
+	decryptFile.write(decrypted, BLOCKBYTE);
 
 	//close filestreams
 	plainFile.close();
@@ -52,7 +71,21 @@ int main()
 	decryptFile.close();
 }
 
-void printByte(char* b)
+void makeMulGF()
+{
+	//
+	for (int i = 0; i < 256; i++)
+	{
+		
+	}
+}
+
+void makeSbox()
+{
+	
+}
+
+void printBlock(char* b)
 {
 	unsigned char* c = (unsigned char*)b;
 	for (int i = 0; i < 16; i++)
