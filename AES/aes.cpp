@@ -73,11 +73,8 @@ int main()
 
 void makeMulGF()
 {
-	//
-	for (int i = 0; i < 256; i++)
-	{
-		
-	}
+	int ip = 0x165;   //1,0110,0101
+	
 }
 
 void makeSbox()
