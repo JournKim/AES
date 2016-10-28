@@ -5,6 +5,7 @@
 
 #define BLOCKBYTE 16
 
+//#define IPOLY 0x11B
 #define IPOLY 0x165
 
 using namespace std;
@@ -18,7 +19,7 @@ int RC[10];
 
 // print hex value
 void printBlock(char* b);
-void printBlockB(char** c, int i);
+//void printBlockB(char** c, int i);
 // RoundKey (Key Expand)
 void makeRC();
 void keyExpansion(char* key);
@@ -232,29 +233,14 @@ void makeSbox()
 		{
 			if (multi(i, j) == 1)
 			{
-				sbox[i / 16][i % 16] = sX(j);
+				int t = sX(j);
+				sbox[i / 16][i % 16] = t;
+				invSbox[t / 16][t % 16] = i;
 			}
 		}
 	}
 
 	return;
-
-	bool chkd[256] = { false };
-	for (int r = 0; r < 16; r++)
-	{
-		for (int c = 0; c < 16; c++)
-		{
-			sbox[r][c] = inverse(r * 16 + c);
-			//sX(sbox[r][c]);
-		}
-	}
-	/*for (int i = 0; i < 256; i++)
-	{
-		if (chkd[i] == false)
-		{
-			chkd
-		}
-	}*/
 }
 
 void printBlock(char* b)
@@ -320,16 +306,40 @@ void keyExpansion(char *key)
 	//repeat 10 ;
 	for (int i = 1; i <= 10; i++)
 	{
-		int index = i * 4;
-		int* rf = RFunc(i);
-
-		for(int j=0; j<4; j++)
-			RKey[index][j] = rf[j] ^ RKey[index - 4][j];
-		for (int k = index + 1; k < index + 4; k++) {
+		int index = 4 * i;
+		
+		for (int j = 0; j < 4; j++)
+		{
+			RKey[index + j][0] = RKey[index + j - 4][0];
+			RKey[index + j][1] = RKey[index + j - 4][1];
+			RKey[index + j][2] = RKey[index + j - 4][2];
+			RKey[index + j][3] = RKey[index + j - 4][3];
+		}
+		// index + 0
+		{
+			int tmp[4];
+			tmp[0] = RKey[index - 1][1];
+			tmp[1] = RKey[index - 1][2];
+			tmp[2] = RKey[index - 1][3];
+			tmp[3] = RKey[index - 1][0];
 			for (int j = 0; j < 4; j++)
 			{
-				RKey[k][j] = RKey[k - 1][j] ^ RKey[k - 4][j];
+				tmp[j] = getSBox(tmp[j]);
 			}
+			tmp[0] = tmp[0] ^ RC[i - 1];
+			//cout << i << "th Sboxbox" << endl; 
+			for (int j = 0; j < 4; j++)
+			{
+				RKey[index + j][0] = RKey[index + j][0] ^ tmp[0];
+				RKey[index + j][1] = RKey[index + j][1] ^ tmp[1];
+				RKey[index + j][2] = RKey[index + j][2] ^ tmp[2];
+				RKey[index + j][3] = RKey[index + j][3] ^ tmp[3];
+
+				tmp[0] = RKey[index + j][0];
+				tmp[1] = RKey[index + j][1];
+				tmp[2] = RKey[index + j][2];
+				tmp[3] = RKey[index + j][3];
+			}	
 		}
 
 		printf("ROUND %d : ", i);
@@ -337,28 +347,29 @@ void keyExpansion(char *key)
 	}
 }
 
-int* RFunc(int i)
-{
-	//cout << "RFunc IN" << endl;
-	int index = i * 4;
-	int* c = new int[4];
-	for (int i = 0; i < 4; i++)
-	{
-		c[i] = RKey[index-1][(i + 1) % 4];
-	}
-
-	for (int i = 0; i < 4; i++)
-	{
-		c[i] = getSBox(c[i]) ^ c[(i + 1) % 4];
-	}
-	c[0] = c[0] ^ RC[i-1];
-
-	return c;
-}
+//int* RFunc(int i)
+//{
+//	//cout << "RFunc IN" << endl;
+//	int index = i * 4;
+//	int* c = new int[4];
+//	for (int i = 0; i < 4; i++)
+//	{
+//		c[i] = RKey[index-1][(i + 1) % 4];
+//	}
+//
+//	for (int i = 0; i < 4; i++)
+//	{
+//		c[i] = getSBox(c[i]) ^ c[(i + 1) % 4];
+//	}
+//	c[0] = c[0] ^ RC[i-1];
+//
+//	return c;
+//}
 
 int getSBox(int c)
 {
-	return sbox[c/0x10][c%0x10];
+	unsigned char ch = c % 0x100;
+	return sbox[ch/0x10][ch%0x10];
 }
 
 void makeRC()
