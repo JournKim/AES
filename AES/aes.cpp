@@ -312,7 +312,6 @@ void encrypt(char * pT, char * cT)
 	for (int i = 0; i <= 10; i++)
 	{
 		printf("Round %d\n", i);
-
 		if (i != 0) {
 			subByte(block);
 			shiftRows(block);
@@ -321,7 +320,6 @@ void encrypt(char * pT, char * cT)
 				mixColumns(block);
 			}
 		}
-
 		addRoundKey(block, i);
 		printf("\n");
 	}
@@ -364,36 +362,32 @@ void decrypt(char * cT, char * pT)
 // get inverse of n in galois field
 int inverse(int n) {
 	
-	for (int i = 0; i < 256; i++)
+	/*for (int i = 0; i < 256; i++)
 	{
 		if (multi(i, n) == 1)
 			return i;
 	}
-	return 0;
+	return 0;*/
 	
 	// ****** Not Complete *******//
 	// Extended Euclidean Algorithm
-	int a[3] = { 1,0,IPOLY };
+	int a[3] = { 1,0,IPOLY ^ 0x100 };
 	int b[3] = { 0,1,n };
 	int c[3];
-	//int t[3];
 	int q;
 	while (1) {
 		if (b[2] == 0)
 		{
-			//printf("Inverse of %X :\t NULLLLLLLLLL\n", n);
 			return -1;
 		}
 		if (b[2] == 1)
 		{
-			//printf("Inverse of %X :\t %X\n", n, b[1]);
 			return (int)(b[1] % 0x100);
 		}
 		q = divide(a[2], b[2]);
 		for (int i = 0; i < 3; i++)
-			c[i] = add(a[i], multi(q,b[i]));
+			c[i] = a[i] ^ multi(q,b[i]);
 
-		//printf("a : %X, b : %X, c : %X, q : %X\n",a[2],b[2],c[2],q);
 		for (int i = 0; i < 3; i++)
 		{
 			a[i] = b[i];
