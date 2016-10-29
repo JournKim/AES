@@ -5,36 +5,41 @@
 
 #define BLOCKBYTE 16
 
+
+// Hex Expresstion of Irreducible Polynomials
 //#define IPOLY 0x11B
 #define IPOLY 0x165
 
 using namespace std;
-typedef int mybyte;
 
-mybyte mul[256][256];
-mybyte sbox[16][16];
-mybyte invSbox[16][16];
-mybyte RKey[44][4] = { 0, };
+// arrays for Encrypt, Decrypt
+int sbox[16][16];
+int invSbox[16][16];
+int RKey[44][4];// = { 0, };
 int RC[10];
 
 // print hex value
 void printText(char* b);
 void printBlock(int** block);
-//void printBlockB(char** c, int i);
-// RoundKey (Key Expand)
+
+// Key Expansion
 void makeRC();
 void keyExpansion(char* key);
 
-//Substitute Byte
-mybyte inverse(int a);
+// Galois Field Operations
 int add(int a, int b);
 int multi(int a, int b);
+int inverse(int a);
+
+// for Extended Euclidean Algorithm
 int high(int a);
 int divide(int a, int b);
+
+//Substitute Byte
 void makeSbox();
 int getSBox(int c);
 int getInvSBox(int c);
-mybyte sX(mybyte c);
+int sX(int c);
 
 void subByte(int** block);
 void invSubByte(int** block);
@@ -57,12 +62,7 @@ void encrypt(char* pT, char* cT);
 void decrypt(char* cT, char* pT);
 
 int main()
-{	
-	//cout << multi(0x16, 0x10) << endl;
-	makeRC();
-	//makeMulGF();
-	makeSbox();
-
+{
 	//declare fstreams and open files
 	ifstream plainFile;
 	ifstream keyFile;
@@ -78,11 +78,13 @@ int main()
 		cout << "File Not Opened" << endl;
 		return -1;
 	}
-
+	// arrays to store texts
 	char plainText[BLOCKBYTE + 2];
 	char key[BLOCKBYTE + 2];
 	char cipherText[BLOCKBYTE + 2];
 	char decrypted[BLOCKBYTE + 2];
+
+	// read plaintext, key
 	plainFile.read(plainText, BLOCKBYTE);
 	keyFile.read(key, BLOCKBYTE);
 
@@ -92,8 +94,11 @@ int main()
 	printText(key);
 	cout << endl;
 	
+	//make RC, SBox;
+	makeRC();
+	makeSbox();
 	
-	// encryption
+	// encryption Start
 	cout << "<------ ENCRYPTION ------>\n\n";
 
 	// Key Expand
@@ -102,13 +107,17 @@ int main()
 	cout << endl;
 
 	encrypt(plainText, cipherText);
+	// encryption End
 
+	// write ciphertext to file
 	cipherFile.write(cipherText, BLOCKBYTE);
 	
-	// decryption
+	// decryption Start
 	cout << "\n<------ DECRYPTION ------>\n\n";
 	decrypt(cipherText, decrypted);
+	// decryption End
 
+	// write decrypted text to file
 	decryptFile.write(decrypted, BLOCKBYTE);
 
 	//close filestreams
@@ -118,12 +127,14 @@ int main()
 	decryptFile.close();
 }
 
+// Substitute Bytes
 void subByte(int ** block)
 {
 	for (int i = 0; i < 4; i++)
 	{
 		for (int j = 0; j < 4; j++)
 		{
+			// get SBox value, put it into block
 			block[i][j] = getSBox(block[i][j]);
 		}
 	}
@@ -131,12 +142,14 @@ void subByte(int ** block)
 	printBlock(block);
 }
 
+// Inverse Substitute Bytes
 void invSubByte(int ** block)
 {
 	for (int i = 0; i < 4; i++)
 	{
 		for (int j = 0; j < 4; j++)
 		{
+			// get InvSBox value, put it into block
 			block[i][j] = getInvSBox(block[i][j]);
 		}
 	}
@@ -144,11 +157,13 @@ void invSubByte(int ** block)
 	printBlock(block);
 }
 
+// Shift Rows
 void shiftRows(int ** block)
 {
 	int t;
 	for (int i = 1; i < 4; i++)
 	{
+		// left circular shift by row number
 		for (int j = 0; j < i; j++)
 		{
 			t = block[i][0];
@@ -163,11 +178,13 @@ void shiftRows(int ** block)
 	printBlock(block);
 }
 
+// Inverse Shift Rows
 void invShiftRows(int ** block)
 {
 	int t;
 	for (int i = 1; i < 4; i++)
 	{
+		// right circular shift by row number
 		for (int j = 0; j < 4-i; j++)
 		{
 			t = block[i][0];
@@ -182,8 +199,10 @@ void invShiftRows(int ** block)
 	printBlock(block);
 }
 
+// Mix Columns
 void mixColumns(int ** block)
 {
+	// Constant matrix
 	int s[4][4] = {
 		{0x02, 0x03, 0x01, 0x01},
 		{0x01, 0x02, 0x03, 0x01},
@@ -191,10 +210,13 @@ void mixColumns(int ** block)
 		{0x03, 0x01, 0x01, 0x02}
 	};
 	int r[4];
+
+	// Matrix Multiplication
 	for (int i = 0; i < 4; i++)
 	{
 		for (int j = 0; j < 4; j++)
 		{
+			// ^(XOR) means addtion in Galois Field
 			r[j] = multi(s[j][0], block[0][i]);
 			r[j] ^= multi(s[j][1], block[1][i]);
 			r[j] ^= multi(s[j][2], block[2][i]);
@@ -209,8 +231,10 @@ void mixColumns(int ** block)
 	printBlock(block);
 }
 
+// Inverse Mix Columns
 void invMixColumns(int ** block)
 {
+	// Constant matrix
 	int s[4][4] = {
 		{ 0x0E, 0x0B, 0x0D, 0x09 },
 		{ 0x09, 0x0E, 0x0B, 0x0D },
@@ -236,8 +260,10 @@ void invMixColumns(int ** block)
 	printBlock(block);
 }
 
+// Add Round Key
 void addRoundKey(int ** block, int round)
 {
+	// XOR(Addition in Galois Field) block and round key
 	int index = round * 4;
 	for (int i = 0; i < 4; i++)
 	{
@@ -250,6 +276,7 @@ void addRoundKey(int ** block, int round)
 	printBlock(block);
 }
 
+// convert text into 4*4 matrix form
 void textToBlock(char * pT, int ** block)
 {
 	for (int i = 0; i < 16; i++)
@@ -260,6 +287,7 @@ void textToBlock(char * pT, int ** block)
 	}
 }
 
+// convert 4*4 matrix to text
 void blockToText(int ** block, char * cT)
 {
 	for (int i = 0; i < 16; i++)
@@ -269,8 +297,10 @@ void blockToText(int ** block, char * cT)
 	cT[16] = 0;
 }
 
+// encrypt plaintext to ciphertext
 void encrypt(char * pT, char * cT)
 {
+	// 4*4 matrix to store text
 	int** block = new int*[4];
 	for (int i = 0; i < 4; i++)
 	{
@@ -301,6 +331,7 @@ void encrypt(char * pT, char * cT)
 	printText(cT);
 }
 
+// decrypt ciphertext to plaintext
 void decrypt(char * cT, char * pT)
 {
 	int** block = new int*[4];
@@ -318,7 +349,7 @@ void decrypt(char * cT, char * pT)
 			invShiftRows(block);
 			invSubByte(block);
 		}
-		addRoundKey(block, 10 - i);
+		addRoundKey(block, 10 - i); // reverse order to encryption
 		if( i!= 0 && i != 10)
 		{
 			invMixColumns(block);
@@ -330,7 +361,18 @@ void decrypt(char * cT, char * pT)
 	printText(pT);
 }
 
-mybyte inverse(int n) {
+// get inverse of n in galois field
+int inverse(int n) {
+	
+	for (int i = 0; i < 256; i++)
+	{
+		if (multi(i, n) == 1)
+			return i;
+	}
+	return 0;
+	
+	// ****** Not Complete *******//
+	// Extended Euclidean Algorithm
 	int a[3] = { 1,0,IPOLY };
 	int b[3] = { 0,1,n };
 	int c[3];
@@ -345,7 +387,7 @@ mybyte inverse(int n) {
 		if (b[2] == 1)
 		{
 			//printf("Inverse of %X :\t %X\n", n, b[1]);
-			return (mybyte)(b[1] % 0x100);
+			return (int)(b[1] % 0x100);
 		}
 		q = divide(a[2], b[2]);
 		for (int i = 0; i < 3; i++)
@@ -360,6 +402,7 @@ mybyte inverse(int n) {
 	}
 }
 
+// return polynomial's highest degree
 int high(int a)
 {
 	int h = 0;
@@ -371,6 +414,7 @@ int high(int a)
 	return h;
 }
 
+// get quotient
 int divide(int a, int b)
 {
 	int ret = 0;
@@ -392,16 +436,19 @@ int divide(int a, int b)
 	return ret;
 }
 
+// addition in Galois Field
 int add(int a, int b)
 {
 	return (a^b) %0x100;
 }
 
+// multiplication in Galois Field
 int multi(int a, int b)
 {
 	int ret = 0;
 	int arr[8];
 	arr[0] = b;
+	
 	for (int i = 1; i < 8; i++)
 	{
 		arr[i] = arr[i - 1] << 1;
@@ -419,8 +466,10 @@ int multi(int a, int b)
 	return ret;
 }
 
-mybyte sX(mybyte b)
+// matrix operation for make s-box
+int sX(int b)
 {
+	// constant matrix
 	int arr[8][8] = {
 		{1,0,0,0,1,1,1,1},
 		{1,1,0,0,0,1,1,1},
@@ -431,7 +480,10 @@ mybyte sX(mybyte b)
 		{0,0,1,1,1,1,1,0},
 		{0,0,0,1,1,1,1,1}
 	};
+	// constant matrix
 	int aV[8] = { 1,1,0,0,0,1,1,0 };
+
+	// bit expression of b
 	int byteArr[8];
 	int tmp = 0x1;
 	for (int i = 0; i < 8; i++)
@@ -441,6 +493,7 @@ mybyte sX(mybyte b)
 		tmp <<= 1;
 	}
 
+	// matrix operation ( arr * byteArr + aV )
 	int ret[8] = { 0, };
 	for (int i = 0; i < 8; i++)
 	{
@@ -451,7 +504,8 @@ mybyte sX(mybyte b)
 		ret[i] ^= aV[i];
 	}
 
-	mybyte result = 0;
+	// convert bit expresstion to integer
+	int result = 0;
 	tmp = 0x1;
 	for (int i = 0; i < 8; i++)
 	{
@@ -462,24 +516,24 @@ mybyte sX(mybyte b)
 }
 
 
-
+// make s-box and inverse s-box
 void makeSbox()
 {
-	bool chk[256] = { 0, };
-	for (int i = 0; i < 256; i++)
+	bool chk[256] = { 0, }; // for inverse of zero
+	
+	for (int i = 0; i < 16; i++)
 	{
-		// Sbox By MulGF;
-		for (int j = 0; j < 256; j++)
+		for (int j = 0; j < 16; j++)
 		{
-			if (multi(i, j) == 1)
-			{
-				int t = sX(j);
-				sbox[i / 16][i % 16] = t;
-				chk[t] = 1;
-				invSbox[t / 16][t % 16] = i;
-			}
+			int t = inverse(i*16 + j);
+			t = sX(t);
+			sbox[i][j] = t;
+			chk[t] = 1;
+			invSbox[t / 16][t % 16] = i * 16 + j;
 		}
 	}
+
+	// checkout s-box value of zero
 	for (int i = 0; i < 256; i++)
 	{
 		if (chk[i] == false)
@@ -488,19 +542,11 @@ void makeSbox()
 			invSbox[i / 16][i % 16] = 0;
 		}
 	}
-	// test output
-	/*for (int i = 0; i < 16; i++)
-	{
-		for (int j = 0; j < 16; j++)
-		{
-			printf("%2X ", sbox[i][j]);
-		}
-		cout << endl;
-	}
-*/
+	
 	return;
 }
 
+// print hex form of text
 void printText(char* b)
 {
 	unsigned char* c = (unsigned char*)b;
@@ -516,6 +562,7 @@ void printText(char* b)
 	printf("\n");
 }
 
+// print hex form of 4*4 matrix block
 void printBlock(int ** block)
 {
 	unsigned int **b = (unsigned int**)block;
@@ -536,6 +583,7 @@ void printBlock(int ** block)
 	cout << endl;
 }
 
+// print Key Expansion Progress
 void printBlockR(int i)
 {
 	unsigned char ch;
@@ -558,8 +606,10 @@ void printBlockR(int i)
 	printf("\n");
 }
 
+// key expansion
 void keyExpansion(char *key)
 {
+	// convert key to 4*4 matrix form
 	for (int i = 0; i < 16; i++)
 	{
 		RKey[i / 4][i % 4] = key[i];
@@ -579,6 +629,7 @@ void keyExpansion(char *key)
 			RKey[index + j][2] = RKey[index + j - 4][2];
 			RKey[index + j][3] = RKey[index + j - 4][3];
 		}
+		
 		// index + 0
 		{
 			int tmp[4];
@@ -611,22 +662,26 @@ void keyExpansion(char *key)
 	}
 }
 
+// return s-box value of c
 int getSBox(int c)
 {
 	unsigned char ch = c % 0x100;
 	return sbox[ch/0x10][ch%0x10];
 }
 
+// return inverse s-box value of c
 int getInvSBox(int c)
 {
 	unsigned char ch = c % 0x100;
 	return invSbox[ch / 0x10][ch % 0x10];
 }
 
+// set Round Constant
 void makeRC()
 {
 	cout << "RC\t: ";
 	RC[0] = 0x01;
+
 	for (int i = 1; i < 10; i++)
 	{
 		RC[i] = RC[i - 1] * 2;
