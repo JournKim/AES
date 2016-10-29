@@ -18,12 +18,12 @@ mybyte RKey[44][4] = { 0, };
 int RC[10];
 
 // print hex value
-void printBlock(char* b);
+void printText(char* b);
+void printBlock(int** block);
 //void printBlockB(char** c, int i);
 // RoundKey (Key Expand)
 void makeRC();
 void keyExpansion(char* key);
-int* RFunc(int i);
 
 //Substitute Byte
 mybyte inverse(int a);
@@ -33,12 +33,28 @@ int high(int a);
 int divide(int a, int b);
 void makeSbox();
 int getSBox(int c);
+int getInvSBox(int c);
 mybyte sX(mybyte c);
+
+void subByte(int** block);
+void invSubByte(int** block);
+
 //Shift Rows
+void shiftRows(int** block);
+void invShiftRows(int** block);
 
 //Mix Columns
+void mixColumns(int** block);
+void invMixColumns(int** block);
 
 //Round Key
+void addRoundKey(int** block, int round);
+
+//Encryption, Decryption
+void textToBlock(char* pT, int** block);
+void blockToText(int** block, char* cT);
+void encrypt(char* pT, char* cT);
+void decrypt(char* cT, char* pT);
 
 int main()
 {	
@@ -46,7 +62,7 @@ int main()
 	makeRC();
 	//makeMulGF();
 	makeSbox();
-	//printf("%X\n", sX(0xE0));
+
 	//declare fstreams and open files
 	ifstream plainFile;
 	ifstream keyFile;
@@ -71,20 +87,28 @@ int main()
 	keyFile.read(key, BLOCKBYTE);
 
 	cout << "PLAIN\t: ";
-	printBlock(plainText);
+	printText(plainText);
 	cout << "KEY\t: ";
-	printBlock(key);
+	printText(key);
 	cout << endl;
-	/// encrypt
+	
+	
+	// encryption
 	cout << "<------ ENCRYPTION ------>\n\n";
 
+	// Key Expand
 	cout << "KEY EXPANSION" << endl;
 	keyExpansion(key);
+	cout << endl;
 
+	encrypt(plainText, cipherText);
 
 	cipherFile.write(cipherText, BLOCKBYTE);
 	
-	// decrypt
+	// decryption
+	cout << "\n<------ DECRYPTION ------>\n\n";
+	decrypt(cipherText, decrypted);
+
 	decryptFile.write(decrypted, BLOCKBYTE);
 
 	//close filestreams
@@ -92,6 +116,218 @@ int main()
 	keyFile.close();
 	cipherFile.close();
 	decryptFile.close();
+}
+
+void subByte(int ** block)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			block[i][j] = getSBox(block[i][j]);
+		}
+	}
+	cout << "SB : ";
+	printBlock(block);
+}
+
+void invSubByte(int ** block)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			block[i][j] = getInvSBox(block[i][j]);
+		}
+	}
+	cout << "SB : ";
+	printBlock(block);
+}
+
+void shiftRows(int ** block)
+{
+	int t;
+	for (int i = 1; i < 4; i++)
+	{
+		for (int j = 0; j < i; j++)
+		{
+			t = block[i][0];
+			block[i][0] = block[i][1];
+			block[i][1] = block[i][2];
+			block[i][2] = block[i][3];
+			block[i][3] = t;
+		}
+	}
+
+	cout << "SR : ";
+	printBlock(block);
+}
+
+void invShiftRows(int ** block)
+{
+	int t;
+	for (int i = 1; i < 4; i++)
+	{
+		for (int j = 0; j < 4-i; j++)
+		{
+			t = block[i][0];
+			block[i][0] = block[i][1];
+			block[i][1] = block[i][2];
+			block[i][2] = block[i][3];
+			block[i][3] = t;
+		}
+	}
+
+	cout << "SR : ";
+	printBlock(block);
+}
+
+void mixColumns(int ** block)
+{
+	int s[4][4] = {
+		{0x02, 0x03, 0x01, 0x01},
+		{0x01, 0x02, 0x03, 0x01},
+		{0x01, 0x01, 0x02, 0x03},
+		{0x03, 0x01, 0x01, 0x02}
+	};
+	int r[4];
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			r[j] = multi(s[j][0], block[0][i]);
+			r[j] ^= multi(s[j][1], block[1][i]);
+			r[j] ^= multi(s[j][2], block[2][i]);
+			r[j] ^= multi(s[j][3], block[3][i]);
+		}
+		block[0][i] = r[0];
+		block[1][i] = r[1];
+		block[2][i] = r[2];
+		block[3][i] = r[3];
+	}
+	cout << "MC : ";
+	printBlock(block);
+}
+
+void invMixColumns(int ** block)
+{
+	int s[4][4] = {
+		{ 0x0E, 0x0B, 0x0D, 0x09 },
+		{ 0x09, 0x0E, 0x0B, 0x0D },
+		{ 0x0D, 0x09, 0x0E, 0x0B },
+		{ 0x0B, 0x0D, 0x09, 0x0E }
+	};
+	int r[4];
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			r[j] = multi(s[j][0], block[0][i]);
+			r[j] ^= multi(s[j][1], block[1][i]);
+			r[j] ^= multi(s[j][2], block[2][i]);
+			r[j] ^= multi(s[j][3], block[3][i]);
+		}
+		block[0][i] = r[0];
+		block[1][i] = r[1];
+		block[2][i] = r[2];
+		block[3][i] = r[3];
+	}
+	cout << "MC : ";
+	printBlock(block);
+}
+
+void addRoundKey(int ** block, int round)
+{
+	int index = round * 4;
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			block[j][i] ^= (RKey[index+i][j] % 0x100);
+		}
+	}
+	cout << "AR : ";
+	printBlock(block);
+}
+
+void textToBlock(char * pT, int ** block)
+{
+	for (int i = 0; i < 16; i++)
+	{
+		block[i % 4][i / 4] = 0;
+		block[i % 4][i / 4] = ((unsigned char)pT[i]) % 0x100;
+		block[i % 4][i / 4] %= 0x100;
+	}
+}
+
+void blockToText(int ** block, char * cT)
+{
+	for (int i = 0; i < 16; i++)
+	{
+		cT[i] = block[i % 4][i / 4];
+	}
+	cT[16] = 0;
+}
+
+void encrypt(char * pT, char * cT)
+{
+	int** block = new int*[4];
+	for (int i = 0; i < 4; i++)
+	{
+		block[i] = new int[4];
+	}
+	textToBlock(pT, block);
+
+	// Round 0 to Round 10
+	for (int i = 0; i <= 10; i++)
+	{
+		printf("Round %d\n", i);
+
+		if (i != 0) {
+			subByte(block);
+			shiftRows(block);
+			if (i != 10)
+			{
+				mixColumns(block);
+			}
+		}
+
+		addRoundKey(block, i);
+		printf("\n");
+	}
+	blockToText(block, cT);
+
+	cout << "CIPHER : ";
+	printText(cT);
+}
+
+void decrypt(char * cT, char * pT)
+{
+	int** block = new int*[4];
+	for (int i = 0; i < 4; i++)
+	{
+		block[i] = new int[4];
+	}
+	textToBlock(cT, block);
+
+	for (int i = 0; i <= 10; i++)
+	{
+		printf("Round %d\n", i);
+		if (i != 0)
+		{
+			invShiftRows(block);
+			invSubByte(block);
+		}
+		addRoundKey(block, 10 - i);
+		if( i!= 0 && i != 10)
+		{
+			invMixColumns(block);
+		}
+		printf("\n");
+	}
+	blockToText(block, pT);
+	printf("DECRYPTED : ");
+	printText(pT);
 }
 
 mybyte inverse(int n) {
@@ -225,25 +461,47 @@ mybyte sX(mybyte b)
 	return result;
 }
 
+
+
 void makeSbox()
 {
+	bool chk[256] = { 0, };
 	for (int i = 0; i < 256; i++)
 	{
+		// Sbox By MulGF;
 		for (int j = 0; j < 256; j++)
 		{
 			if (multi(i, j) == 1)
 			{
 				int t = sX(j);
 				sbox[i / 16][i % 16] = t;
+				chk[t] = 1;
 				invSbox[t / 16][t % 16] = i;
 			}
 		}
 	}
-
+	for (int i = 0; i < 256; i++)
+	{
+		if (chk[i] == false)
+		{
+			sbox[0][0] = i;
+			invSbox[i / 16][i % 16] = 0;
+		}
+	}
+	// test output
+	/*for (int i = 0; i < 16; i++)
+	{
+		for (int j = 0; j < 16; j++)
+		{
+			printf("%2X ", sbox[i][j]);
+		}
+		cout << endl;
+	}
+*/
 	return;
 }
 
-void printBlock(char* b)
+void printText(char* b)
 {
 	unsigned char* c = (unsigned char*)b;
 	for (int i = 0; i < 16; i++)
@@ -256,6 +514,26 @@ void printBlock(char* b)
 		printf("%X ", c[i]);
 	}
 	printf("\n");
+}
+
+void printBlock(int ** block)
+{
+	unsigned int **b = (unsigned int**)block;
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			//if (b[j][i] < 16)
+			//{
+			//	//printf("0");
+			//	printf("%X ", b[j][i] % 0x100);
+			//	continue;
+			//}
+				
+			printf("%2X ", ((b[j][i]) % 0x100));
+		}
+	}
+	cout << endl;
 }
 
 void printBlockR(int i)
@@ -278,20 +556,6 @@ void printBlockR(int i)
 		//printf(")");
 	}
 	printf("\n");
-}
-
-void xor4Bytes(int i, int* a, int* b)
-{
-	int* dest = RKey[i];
-
-	for (int i = 0; i < 4; i++)
-	{
-		dest[i] = a[i] ^ b[i];
-	}
-
-	//printf("%d Word XOR\n",i);
-	//printf("%X %X %X %X -> %X %X %X %X\n", a[0], a[1], a[2], a[3], b[0], b[1], b[2], b[3]);
-
 }
 
 void keyExpansion(char *key)
@@ -330,10 +594,10 @@ void keyExpansion(char *key)
 			//cout << i << "th Sboxbox" << endl; 
 			for (int j = 0; j < 4; j++)
 			{
-				RKey[index + j][0] = RKey[index + j][0] ^ tmp[0];
-				RKey[index + j][1] = RKey[index + j][1] ^ tmp[1];
-				RKey[index + j][2] = RKey[index + j][2] ^ tmp[2];
-				RKey[index + j][3] = RKey[index + j][3] ^ tmp[3];
+				RKey[index + j][0] = (RKey[index + j][0] ^ tmp[0]) % 0x100;
+				RKey[index + j][1] = (RKey[index + j][1] ^ tmp[1]) % 0x100;
+				RKey[index + j][2] = (RKey[index + j][2] ^ tmp[2]) % 0x100;
+				RKey[index + j][3] = (RKey[index + j][3] ^ tmp[3]) % 0x100;
 
 				tmp[0] = RKey[index + j][0];
 				tmp[1] = RKey[index + j][1];
@@ -347,29 +611,16 @@ void keyExpansion(char *key)
 	}
 }
 
-//int* RFunc(int i)
-//{
-//	//cout << "RFunc IN" << endl;
-//	int index = i * 4;
-//	int* c = new int[4];
-//	for (int i = 0; i < 4; i++)
-//	{
-//		c[i] = RKey[index-1][(i + 1) % 4];
-//	}
-//
-//	for (int i = 0; i < 4; i++)
-//	{
-//		c[i] = getSBox(c[i]) ^ c[(i + 1) % 4];
-//	}
-//	c[0] = c[0] ^ RC[i-1];
-//
-//	return c;
-//}
-
 int getSBox(int c)
 {
 	unsigned char ch = c % 0x100;
 	return sbox[ch/0x10][ch%0x10];
+}
+
+int getInvSBox(int c)
+{
+	unsigned char ch = c % 0x100;
+	return invSbox[ch / 0x10][ch % 0x10];
 }
 
 void makeRC()
